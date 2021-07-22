@@ -5,6 +5,10 @@ import os
 from dotenv import load_dotenv
 import random
 import ffmpeg
+import urllib.request
+import re
+import lxml
+from lxml import etree
 from discord.ext import *
 from discord.ext import commands
 from discord.ext.commands import Bot
@@ -14,6 +18,9 @@ from time import strftime
 import datetime
 players = {}
 player = []
+queue = []
+queue_list=[]
+count=0
 client= commands.Bot(command_prefix="||")
 roast_texts=["Where’s your off button?",
 "You’re so real. A real ass.",
@@ -80,6 +87,7 @@ async def on_ready():
 @client.command(pass_context=True)                      #===========================================Join
 async def join(ctx):
     channel = ctx.author.voice.channel
+    await ctx.send("***Joining   ***"+":mailbox_with_mail:")
     await channel.connect()
 
 
@@ -87,24 +95,36 @@ async def join(ctx):
 async def leave(ctx):
     voice = discord.utils.get(client.voice_clients, guild=ctx.guild)
     if voice.is_connected():
-            await ctx.voice_client.disconnect()
+        await ctx.send(":mailbox_with_no_mail:"+"***   Successfully disconnected***")
+        await ctx.voice_client.disconnect()
     else:
-        await ctx.send("The bot is not connected to Arsenal Voice Channel")
+        await ctx.send(":x:"+"***   The bot is not connected to Arsenal Voice Channel***")
 
 
 @client.command()                                         #=========================================Play
-async def play(ctx, url:str):
+async def play(ctx, search_keyword:str):
+    # global queue_list, count
+    search_song_url = urllib.request.urlopen("https://www.youtube.com/results?search_query=" + search_keyword)
+    video_ids = re.findall(r"watch\?v=(\S{11})", search_song_url.read().decode())
+    url="https://www.youtube.com/watch?v=" + video_ids[0]
+    str(url)
+    youtube = etree.HTML(urllib.request.urlopen(url).read())
+    video_title = youtube.xpath("/html/head/title")
+    print (video_title[0].text)
     song_there = os.path.isfile("song.mp3")
     try:
         if song_there:
             os.remove("song.mp3")
             player.clear()
+            
     except PermissionError:
         await ctx.send("Wait for the current playing music end or use the 'stop' command...")
         return
     await ctx.send("Getting everything ready, playing audio soon, depends on your internet speed...")
     print("Someone wants to play music let me get that ready for them...")
     voice = discord.utils.get(client.voice_clients, guild=ctx.guild)
+    await ctx.send("***Now Playing   ***"+":notes:"+"   "+video_title[0].text)
+    await ctx.send(url)
     ydl_opts = {
         'format': 'bestaudio/best',
             'postprocessors': [{
@@ -120,12 +140,13 @@ async def play(ctx, url:str):
             os.rename(file, 'song.mp3')
     voice.play(discord.FFmpegPCMAudio("song.mp3"))
     
-    voice.volume = 100
-    
+    voice.volume = 90
+
+
 
 @client.command()
 async def tell_me_about_yourself(ctx):
-    text = "My name is Arsenal!\n I was built by SDB DarkNinja. At present I have limited features(find out more by typing ||help)\n :)"
+    text = "***My name is Arsenal!\n I was built by SDB DarkNinja. At present I have limited features(find out more by typing ||help)\n :)***"
     await ctx.send(text)
 
 
@@ -134,9 +155,9 @@ async def pause(ctx):
     voice = discord.utils.get(client.voice_clients, guild=ctx.guild)
     if voice.is_playing():
         voice.pause()
-        await ctx.send("Paused...")
+        await ctx.send("***Paused   ***"+":pause_button:")
     else:
-        await ctx.send("Currently no audio is playing")
+        await ctx.send(":x:"+"***   Currently no audio is playing***")
 
 
 @client.command()                                   #===============================================Resume
@@ -144,21 +165,21 @@ async def resume(ctx):
     voice = discord.utils.get(client.voice_clients, guild=ctx.guild)
     if voice.is_paused():
         voice.resume()
-        await ctx.send("Resumed...")
+        await ctx.send("***Resuming   ***"+":play_pause:")
     else:
-        await ctx.send("The audio is not Paused")
+        await ctx.send(":x:"+"***   The audio is not Paused***")
 
 
 @client.command()                                    #===============================================Stop
 async def stop(ctx):
     voice = discord.utils.get(client.voice_clients, guild=ctx.guild)
     voice.stop()
-    await ctx.send("Stopped...")
+    await ctx.send("***Stopped   ***"+":stop_button:")
 
 
 @client.command()                                    #===============================================Introduce
 async def introduce(ctx):
-    await ctx.send(f"Hello sir, @{ctx.author}, I am a robot assistant of your's, you can tell me anything so I can execute that for you, sir")
+    await ctx.send(f"***Hello sir, @{ctx.author}, I am a robot assistant of your's, you can tell me anything so I can execute that for you, sir***")
 
 
 @client.command()                                    #===============================================SourceCode
@@ -204,7 +225,7 @@ async def helpme(ctx):
     embed.add_field(name="||roast @", value="Bot will roast",inline=True)
     embed.add_field(name="||join", value="Bot will join the arsenal voice channel",inline=True)
     embed.add_field(name="||leave", value="Bot will disconnect the arsenal voice channel",inline=True)
-    embed.add_field(name="||play [song url]", value="Bot will play that song on the arsenal voice channel",inline=True)
+    embed.add_field(name="||play [song name]", value="Bot will play that song on the arsenal voice channel",inline=True)
     embed.add_field(name="||pause", value="Bot will pause that song on the arsenal voice channel",inline=True)
     embed.add_field(name="||resume", value="Bot will resume that song on the arsenal voice channel",inline=True)
     await ctx.send(content=None, embed= embed)
