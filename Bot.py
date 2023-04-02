@@ -1,4 +1,7 @@
 import discord,requests, sys, webbrowser, bs4
+from discord import colour
+from discord.flags import Intents
+from discord import channel
 import pyjokes
 import youtube_dl
 import os
@@ -18,11 +21,11 @@ from time import strftime
 import datetime
 players = {}
 player = []
-queue = []
-queue_list=[]
 search_list=[]
-count=0
 client= commands.Bot(command_prefix="||")
+intents = discord.Intents.default()
+intents.members =True
+# clients = discord.Client(intents=intents)
 roast_texts=["Where’s your off button?",
 "You’re so real. A real ass.",
 "I’m not shy. I just don’t like you.",
@@ -83,6 +86,15 @@ async def arsenaljokes(ctx):
 @client.event
 async def on_ready():
     print('Bot online')
+    print(client.user.name)
+    print(client.user.id)
+    print("---------------")
+
+@client.event
+async def on_member_join(member,ctx):
+    embed= discord.Embed(title="Welcome",color=0x9208ea,description=f"{member.mention}, Joined \nWelcome to the server :partying_face")
+    embed.set_footer(text="Devoloped by SDBDARKNINJA#7631")
+    msg = await ctx.send(discord.object(id="769225766982123533"),embed=embed)
 
 
 @client.command(pass_context=True)                      #===========================================Join
@@ -104,56 +116,68 @@ async def leave(ctx):
 
 @client.command()  #=========================================Play
 async def play(ctx, search_keyword: str):
-    # global queue_list, count
+    queue_list=[]
+    count=0
     def play_song():
+      queue_list.append(search_keyword)
       voice = discord.utils.get(client.voice_clients, guild=ctx.guild)
       voice.play(discord.FFmpegPCMAudio("song.mp3"))
-    search_song_url = urllib.request.urlopen(
-        "https://www.youtube.com/results?search_query=" + search_keyword)
-    video_ids = re.findall(r"watch\?v=(\S{11})",
-                           search_song_url.read().decode())
-    url = "https://www.youtube.com/watch?v=" + video_ids[0]
-    str(url)
-    youtube = etree.HTML(urllib.request.urlopen(url).read())
-    video_title = youtube.xpath("/html/head/title")
-    print(video_title[0].text)
-    song_there = os.path.isfile("song.mp3")
-    try:
-        if song_there:
-            os.remove("song.mp3")
-            player.clear()
+    for count in range(len(queue_list)):
+        search_song_url = urllib.request.urlopen(
+            "https://www.youtube.com/results?search_query=" + str(queue_list[count]))
+        video_ids = re.findall(r"watch\?v=(\S{11})",
+                            search_song_url.read().decode())
+        url = "https://www.youtube.com/watch?v=" + video_ids[0]
+        str(url)
+        youtube = etree.HTML(urllib.request.urlopen(url).read())
+        video_title = youtube.xpath("/html/head/title")
+        print(video_title[0].text)
+        song_there = os.path.isfile("song.mp3")
+        try:
+            if song_there:
+                os.remove("song.mp3")
+                player.clear()
+                queue_list.pop[0]
 
-    except PermissionError:
+        except PermissionError:
+            await ctx.send(
+                "Wait for the current playing music end or use the 'stop' command..."
+            )
+            
         await ctx.send(
-            "Wait for the current playing music end or use the 'stop' command..."
+            "Getting everything ready, playing audio soon, depends on your internet speed..."
         )
-        return
-    await ctx.send(
-        "Getting everything ready, playing audio soon, depends on your internet speed..."
-    )
-    print("Someone wants to play music let me get that ready for them...")
-    voice = discord.utils.get(client.voice_clients, guild=ctx.guild)
-    await ctx.send("***Now Playing   ***" + ":notes:" + "   " +
-                   video_title[0].text)
-    await ctx.send(url)
-    ydl_opts = {
-        'format':
-        'bestaudio/best',
-        'postprocessors': [{
-            'key': 'FFmpegExtractAudio',
-            'preferredcodec': 'mp3',
-            'preferredquality': '192',
-        }],
-    }
-    with youtube_dl.YoutubeDL(ydl_opts) as ydl:
-        ydl.download([url])
-    for file in os.listdir("./"):
-        if file.endswith(".mp3"):
-            os.rename(file, 'song.mp3')
-    play_song()
-    # voice.play(discord.FFmpegPCMAudio("song.mp3"))
+        print("Someone wants to play music let me get that ready for them...")
+        voice = discord.utils.get(client.voice_clients, guild=ctx.guild)
+        await ctx.send("***Now Playing   ***" + ":notes:" + "   " +
+                    video_title[0].text)
+        await ctx.send(url)
+        ydl_opts = {
+            'format':
+            'bestaudio/best',
+            'postprocessors': [{
+                'key': 'FFmpegExtractAudio',
+                'preferredcodec': 'mp3',
+                'preferredquality': '192',
+            }],
+        }
+        with youtube_dl.YoutubeDL(ydl_opts) as ydl:
+            ydl.download([url])
+        for file in os.listdir("./"):
+            if file.endswith(".mp3"):
+                os.rename(file, 'song.mp3')
+        play_song()
+        # voice.play(discord.FFmpegPCMAudio("song.mp3"))
 
-    voice.volume = 90
+        voice.volume = 90
+        if len(queue_list)==0:
+            break
+        else:
+            count += 1
+            play()
+        
+    
+
 
 
 
